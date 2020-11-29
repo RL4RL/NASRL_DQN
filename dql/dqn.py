@@ -30,8 +30,13 @@ class DQN(nn.Module):
         # an affine operation: y = Wx + b
         self.build_blocks()
     
+    def check_config(self):
+        # Check block configuration to make sure the parents and childs are 
+        # consistent and channel number is correct.
+        raise NotImplementedError
+    
     def build_blocks(self):
-        self.layers = []
+        self.layers = [None]*len(self.blocks)
         self.out_blocks = [] #The id of final output blocks
         self.input_blocks = [] #The id of initial input blocks
         block_n = len(self.blocks)
@@ -58,7 +63,7 @@ class DQN(nn.Module):
             if not block['childs']:
                 #If the block has no child block, gather its output.
                 self.out_blocks.append(block_id)
-            self.layers.append(layer)
+            self.layers[block_id] = layer
         out_shape = np.max(self.shapes[self.out_blocks],axis=0)
         out_channel = np.sum([self.layers[out_block].out_channels for out_block in self.out_blocks])
         self.fc1 = nn.Linear(out_shape[0]*out_shape[1]*out_channel,config.HIDDEN_SIZE)
@@ -78,14 +83,14 @@ class DQN(nn.Module):
             return torch.cat([x,y],dim = 1)
         else:
             max_shape = max(x.shape[-2:],y.shape[-2:])
-            torch.cat([self._pad_to(x,max_shape),self._pad_to(y,max_shape)],dim = 1)
+            return torch.cat([self._pad_to(x,max_shape),self._pad_to(y,max_shape)],dim = 1)
             
     def _pad_to(self,x,max_shape):
         x_shape = x.shape[-2:]
         if x_shape == max_shape:
             return x
         else:
-            delta_shape = np.array(max_shape - x_shape,dtype = np.int)
+            delta_shape = np.array(max_shape,dtype = np.int) - np.array(x_shape,dtype = np.int)
             return F.pad(x,(np.int(delta_shape[1]/2),delta_shape[1]-np.int(delta_shape[1]/2),
                             np.int(delta_shape[0]/2),delta_shape[0]-np.int(delta_shape[0]/2)))
         
@@ -167,7 +172,6 @@ def train_step():
     batch_action = batch_action.to(config.DEVICE)
     batch_reward = batch_reward.to(config.DEVICE)
     batch_done = batch_done.to(config.DEVICE)
-
     current_Q = Q(batch_state).gather(1, batch_action.unsqueeze(1).long())
 
     expected_Q = batch_reward.float()
@@ -204,10 +208,10 @@ if __name__ == "__main__":
                          'out_channels':16,
                          'kernel_size':8,
                          'stride':4},
-                        {'parents':[0],
+                        {'parents':[0,2],
                          'childs':[],
-                         'in_channels':16,
-                         'out_channels':16,
+                         'in_channels':32,
+                         'out_channels':32,
                          'kernel_size':4,
                          'stride':2},
                          {'parents':[0],
@@ -229,7 +233,7 @@ if __name__ == "__main__":
         EPS_0 = 1.0
         EPS_MIN = 0.1
         EPS_LEN = 2*BUFFER_SIZE
-        INITIAL_COLLECTION=50 * BASE
+        INITIAL_COLLECTION=5 * BASE
         REPEAT_ACTIONS = 1
         FRAME_STACK = 4
         LEARNING_RATE = 1e-4
