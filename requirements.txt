@@ -1,0 +1,5 @@
+gym==0.17.3
+tqdm==4.47.0
+matplotlib==3.2.2
+numpy==1.18.5
+opencv-python==4.4.0.46
