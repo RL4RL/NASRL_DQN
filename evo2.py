@@ -318,8 +318,8 @@ class EVO:
                 tot_reward += cumulative_reward
     #            raise
                 loss,q_val = train_step(memory,self.config,Q,target_Q,optimizer)
-                #if global_step % self.config.TARGET_UPDATE == 0:
-                #    target_Q.load_state_dict(Q.state_dict())
+                if global_step % self.config.TARGET_UPDATE == 0:
+                    target_Q.load_state_dict(Q.state_dict())
                 #    torch.save(Q.state_dict(), 'pong_Q%d'%(global_step))
                 #    torch.save(target_Q.state_dict(), 'pong_Q_target_%d'%(global_step))
                 #    save_list.append(('pong_Q%d'%(global_step),'pong_Q_target_%d'%(global_step)))
