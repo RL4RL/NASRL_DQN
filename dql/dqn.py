@@ -18,24 +18,26 @@ from tqdm import tqdm
 from dql.replay import ReplayMemory
 from dql.environment import Enviroment
 from dql.utils import tp_order
+import json
 ### Import for testing should be removed to main after
 #from dqn.environment import GymEnvironment    
 class DQN(nn.Module):
 
     def __init__(self, config): 
         super(DQN, self).__init__()
+        self.config = config
         self.device = config.DEVICE
         self.blocks = config.BLOCK_CONFIG
         self.access_order = tp_order(self.blocks)
         # an affine operation: y = Wx + b
-        self.build_blocks()
+        self.build_net()
     
     def check_config(self):
         # Check block configuration to make sure the parents and childs are 
         # consistent and channel number is correct.
         raise NotImplementedError
     
-    def build_blocks(self):
+    def build_net(self):
         self.layers = [None]*len(self.blocks)
         self.out_blocks = [] #The id of final output blocks
         self.input_blocks = [] #The id of initial input blocks
@@ -45,12 +47,12 @@ class DQN(nn.Module):
             block = self.blocks[block_id]
             if not block['parents']:
                 #If the current block has no parent, feed the image stack.
-                layer = nn.Conv2d(in_channels = config.FRAME_STACK,
+                layer = nn.Conv2d(in_channels = self.config.FRAME_STACK,
                                          out_channels = block['out_channels'],
                                          kernel_size = block['kernel_size'],
                                          stride = block['stride'],
                                          padding = 0)
-                self.shapes[block_id] = self.get_shape(config.IMAGE_SIZE,layer)
+                self.shapes[block_id] = self.get_shape(self.config.IMAGE_SIZE,layer)
                 self.input_blocks.append(block_id)
             else:
                 layer = nn.Conv2d(in_channels = block['in_channels'],
@@ -66,8 +68,8 @@ class DQN(nn.Module):
             self.layers[block_id] = layer
         out_shape = np.max(self.shapes[self.out_blocks],axis=0)
         out_channel = np.sum([self.layers[out_block].out_channels for out_block in self.out_blocks])
-        self.fc1 = nn.Linear(out_shape[0]*out_shape[1]*out_channel,config.HIDDEN_SIZE)
-        self.out = nn.Linear(config.HIDDEN_SIZE, config.OUT_SIZE)
+        self.fc1 = nn.Linear(out_shape[0]*out_shape[1]*out_channel,self.config.HIDDEN_SIZE)
+        self.out = nn.Linear(self.config.HIDDEN_SIZE, self.config.OUT_SIZE)
         
     def get_shape(self,in_size,layer):
         padding = np.array(layer.padding)
@@ -160,41 +162,39 @@ def save_frames_as_gif(frames, path='./', filename='pong_animation.gif'):
 
     anim = animation.FuncAnimation(plt.gcf(), animate, frames = len(frames), interval=0)
     anim.save(path + filename, writer='imagemagick', fps=12)
-
-
-def train_step():
-    if len(memory) < config.BATCH_SIZE:
-        return None
     
-    batch_state,batch_next_state,batch_action,batch_reward,batch_done = memory.sample()
-    batch_state = batch_state.to(config.DEVICE)
-    batch_next_state = batch_next_state.to(config.DEVICE)
-    batch_action = batch_action.to(config.DEVICE)
-    batch_reward = batch_reward.to(config.DEVICE)
-    batch_done = batch_done.to(config.DEVICE)
-    current_Q = Q(batch_state).gather(1, batch_action.unsqueeze(1).long())
-
-    expected_Q = batch_reward.float()
-    expected_Q[~batch_done] += config.GAMMA * target_Q(batch_next_state[~batch_done]).max(1)[0].detach()
-
-    loss = F.mse_loss(current_Q, expected_Q.unsqueeze(1))
-    #loss = F.smooth_l1_loss(current_Q, current_Q.unsqueeze(1))
-    # Optimize the model
-    optimizer.zero_grad()
-    loss.backward()
-
-    for param in Q.parameters():
-        param.grad.data.clamp_(-1, 1)
-    optimizer.step()
-    return loss.item(),current_Q.mean().item()
-
-def predict(state,eps):
-    if np.random.rand() < eps:
-        return env.env.action_space.sample()
-    q_vals = Q(state.to(config.DEVICE).unsqueeze(0)).squeeze()
-    return q_vals.argmax().item()
+def train(conf_file = None):
+    def train_step():
+        if len(memory) < config.BATCH_SIZE:
+            return None
+        
+        batch_state,batch_next_state,batch_action,batch_reward,batch_done = memory.sample()
+        batch_state = batch_state.to(config.DEVICE)
+        batch_next_state = batch_next_state.to(config.DEVICE)
+        batch_action = batch_action.to(config.DEVICE)
+        batch_reward = batch_reward.to(config.DEVICE)
+        batch_done = batch_done.to(config.DEVICE)
+        current_Q = Q(batch_state).gather(1, batch_action.unsqueeze(1).long())
     
-if __name__ == "__main__":
+        expected_Q = batch_reward.float()
+        expected_Q[~batch_done] += config.GAMMA * target_Q(batch_next_state[~batch_done]).max(1)[0].detach()
+    
+        loss = F.mse_loss(current_Q, expected_Q.unsqueeze(1))
+        #loss = F.smooth_l1_loss(current_Q, current_Q.unsqueeze(1))
+        # Optimize the model
+        optimizer.zero_grad()
+        loss.backward()
+    
+        for param in Q.parameters():
+            param.grad.data.clamp_(-1, 1)
+        optimizer.step()
+        return loss.item(),current_Q.mean().item()
+    
+    def predict(state,eps):
+        if np.random.rand() < eps:
+            return env.env.action_space.sample()
+        q_vals = Q(state.to(config.DEVICE).unsqueeze(0)).squeeze()
+        return q_vals.argmax().item()
     class ENVIROMENT_CONFIG(object):
         ENV_NAME = 'PongDeterministic-v4'
         RANDOM_START = 0
@@ -206,20 +206,26 @@ if __name__ == "__main__":
                          'childs':[1,2],
                          'in_channels':None,
                          'out_channels':16,
-                         'kernel_size':8,
-                         'stride':4},
-                        {'parents':[0,2],
+                         'kernel_size':[5,4],
+                         'stride':2},
+                        {'parents':[0],
+                         'childs':[2],
+                         'in_channels':16,
+                         'out_channels':32,
+                         'kernel_size':3,
+                         'stride':1},
+                         {'parents':[0,1],
+                         'childs':[3],
+                         'in_channels':48,
+                         'out_channels':32,
+                         'kernel_size':3,
+                         'stride':1},
+                          {'parents':[2],
                          'childs':[],
                          'in_channels':32,
                          'out_channels':32,
-                         'kernel_size':4,
-                         'stride':2},
-                         {'parents':[0],
-                         'childs':[1],
-                         'in_channels':16,
-                         'out_channels':16,
-                         'kernel_size':5,
-                         'stride':2}]
+                         'kernel_size':3,
+                         'stride':1}]
         
     class DQN_CONFIG(NN_CONFIG):
         BASE = 1000
@@ -228,7 +234,7 @@ if __name__ == "__main__":
         IMAGE_SIZE = (84,84)
         GAMMA = 1.0
         T_MAX = 5000
-        EPISODE_MAX = 5000
+        EPISODE_MAX = 1000
         TARGET_UPDATE = 1*BASE
         EPS_0 = 1.0
         EPS_MIN = 0.1
@@ -240,9 +246,11 @@ if __name__ == "__main__":
         SAVE_LATEST = 5
         
     config = DQN_CONFIG
+    if conf_file is not None:
+        with open("/home/heavens/CMU/Semester3/PGM/RL4RL/NASRL_DQN/configs/conf1.json",'r') as f:
+            config.BLOCK_CONFIG = json.load(f)
     train_hist = []
     env = Enviroment(config)
-    
     #device = torch.device('cpu')
     config.OUT_SIZE = env.env.action_space.n
     Q = DQN(config).to(config.DEVICE)
@@ -352,6 +360,8 @@ if __name__ == "__main__":
     
     reward_tot, reward, t, done, frames = simulate(env, 500,config, True)
     save_frames_as_gif(frames[::2])
-    
+    return reward_tot
+if __name__ == "__main__":
+    train()
 
 
