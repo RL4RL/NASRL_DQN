@@ -247,7 +247,7 @@ def train(conf_file = None):
         
     config = DQN_CONFIG
     if conf_file is not None:
-        with open("/home/heavens/CMU/Semester3/PGM/RL4RL/NASRL_DQN/configs/conf1.json",'r') as f:
+        with open(conf_file,'r') as f:
             config.BLOCK_CONFIG = json.load(f)
     train_hist = []
     env = Enviroment(config)

@@ -12,6 +12,8 @@ import torch.optim as optim
 from dql import dqn
 import os
 import json
+import argparse
+import sys
 class RNN(nn.Module):
     def __init__(self,config):
         super(RNN, self).__init__()
@@ -34,10 +36,10 @@ class RNN(nn.Module):
                                out_features=config.ANCHOR_SIZE)
         self.v = torch.randn(config.ANCHOR_SIZE)
     def forward(self,batch_size):
-        anchor_hs = [torch.zeros(batch_size,config.HIDDEN_SIZE)]
-        input = torch.randn(1,batch_size,config.HIDDEN_SIZE)
-        h = torch.zeros(config.LAYER_N,batch_size,config.HIDDEN_SIZE)
-        c = torch.zeros(config.LAYER_N,batch_size,config.HIDDEN_SIZE)
+        anchor_hs = [torch.zeros(batch_size,self.config.HIDDEN_SIZE)]
+        input = torch.randn(1,batch_size,self.config.HIDDEN_SIZE)
+        h = torch.zeros(self.config.LAYER_N,batch_size,self.config.HIDDEN_SIZE)
+        c = torch.zeros(self.config.LAYER_N,batch_size,self.config.HIDDEN_SIZE)
         self.outputs_prob = []
         self.logits = []
         for i in np.arange(self.config.MAX_ROLLOUT*len(self.config.STATE_SIZE)):
@@ -57,7 +59,7 @@ class RNN(nn.Module):
                 anchor_o = []
                 for i_prev in np.arange(cycle_idx):
                     p = torch.sum(self.v*nn.functional.tanh(self.wprev(anchor_hs[i_prev])+self.wcurr(output_h)),dim = -1)
-                    anchor_o.append(nn.functional.sigmoid(p))
+                    anchor_o.append(torch.sigmoid(p))
                 if not anchor_o:
                     anchor_o = torch.zeros((batch_size,self.config.MAX_ROLLOUT-1))
                 else:
@@ -175,14 +177,14 @@ class Trainer(object):
     def train(self):
         pass
     
-if __name__ == "__main__":
+def train(cmd_args):
     class NAS_CONFIG(object):
         STRUCTURE_DICT = {"FILTER_H":[1,3,5],
                           "FILTER_W":[1,3,5],
                           "FILTER_N":[24,48],
                           "STRIDE_H":[1,2],
                           "STRIDE_W":[1,2]}
-        MAX_ROLLOUT=6
+        MAX_ROLLOUT=4
         HIDDEN_SIZE = 35
         STATE_SIZE = [len(x) for x in STRUCTURE_DICT.values()]+[MAX_ROLLOUT-1]
         #The anchor points can be at most MAX_ROLLOUT+1, 0 means no parent.
@@ -198,9 +200,9 @@ if __name__ == "__main__":
                       'kernel_size':None,
                       'stride':None}
     class TRAINING_CONFIG(BLOCKS_CONFIG):
-        CONF_FOLDER = "/home/heavens/CMU/Semester3/PGM/RL4RL/NASRL_DQN/configs"
+        CONF_FOLDER = cmd_args.conf_f
         TRAIN_STEP = 10
-        BATCH_SIZE = 2
+        BATCH_SIZE = cmd_args.batch_size
         LEARNING_RATE = 1e-3
         
     def train_step(reward,y):
@@ -239,3 +241,12 @@ if __name__ == "__main__":
         rewards = rewards-reward_baseline
         train_step(rewards,y)
         
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(prog='nas',
+                                     description='Neural Architecture Search.')
+    parser.add_argument('-c', '--conf_f', required = True,
+                        help="Configuration folder.")
+    parser.add_argument('-b', '--batch_size', default = 3,
+                        help="Batch size.",type = int)
+    args = parser.parse_args(sys.argv[1:])
+    train(args)
