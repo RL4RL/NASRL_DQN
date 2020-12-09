@@ -9,7 +9,7 @@ git clone https://github.com/RL4RL/NASRL_DQN.git
 pip install -r requirements.txt
 ```
 Install [Pytorch](https://pytorch.org/)(v1.7)  
-Add NASRL_DQN path into Python path: export PYTHONPATH=PATH_TO_NASRL_DQN  
+Add NASRL_DQN path into Python path: export PYTHONPATH=PATH_TO_NASRL_DQN:$PYTHONPATH  
 
 ## Running
 ### Train a single neural network on Atari datsets(Currently only for Pong game).
@@ -17,8 +17,13 @@ Add NASRL_DQN path into Python path: export PYTHONPATH=PATH_TO_NASRL_DQN
 python dql/dqn.py --conf block_conf.json
 ```
 
-### Run Neural Architecture Search for multiple deep Q learning(Under construction)
+### Run Neural Architecture Search using RNN for multiple deep Q learning
 
 ```python
-python main.py --game pong
+python nsarl.py nas.py
 ```
+### Run Neural Architecture Search using Evolutionary algorithm.
+```python
+python evo2.py
+```
+
