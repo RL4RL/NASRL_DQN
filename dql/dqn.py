@@ -163,7 +163,7 @@ def save_frames_as_gif(frames, path='./', filename='pong_animation.gif'):
     anim = animation.FuncAnimation(plt.gcf(), animate, frames = len(frames), interval=0)
     anim.save(path + filename, writer='imagemagick', fps=12)
     
-def train(conf_file = None):
+def train(conf_file = None,result_f = ''):
     def train_step():
         if len(memory) < config.BATCH_SIZE:
             return None
@@ -234,7 +234,7 @@ def train(conf_file = None):
         IMAGE_SIZE = (84,84)
         GAMMA = 1.0
         T_MAX = 5000
-        EPISODE_MAX = 1000
+        EPISODE_MAX = 1
         TARGET_UPDATE = 1*BASE
         EPS_0 = 1.0
         EPS_MIN = 0.1
@@ -310,13 +310,16 @@ def train(conf_file = None):
         print("Epoch:%d Global step:%d Loss:%.5f Q value: %.5f Total Reward:%.0f Trail Length:%d Epsilon:%.2F Elapsed Time:%.2f Buffer size:%d"%(i_episode, global_step, loss, q_val, tot_reward, t+1, eps, time.time() - t_start, len(memory)))
     ###
     
+    if not os.path.isdir(result_f):
+        os.mkdir(result_f)
     plt.figure(figsize = (10,10))
     plt.plot(train_hist)
     #    plt.plot(np.arange(0,EPISODE_MAX,10),
     #             np.array(train_hist).reshape(-1, EPISODE_MAX).mean(axis = 1))
     plt.xlabel('# of Episode', fontsize = 20)
     plt.ylabel('Total Reward', fontsize = 20)
-    
+    with open(os.path.join(result_f,"train_hist"),'w+') as f:
+        f.write(','.join([str(x) for x in train_hist]))
     
     def simulate(env, horizon,config, render = False):
         tot_reward = 0
@@ -348,20 +351,20 @@ def train(conf_file = None):
     ###
     env.random_start = 0
     _ = simulate(env, 100,config, True)
-    torch.save(Q.state_dict(), 'pong_Q_final')
-    torch.save(target_Q.state_dict(), 'pong_Q_target_final')
+    torch.save(Q.state_dict(), os.path.join(result_f,'pong_Q_final'))
+    torch.save(target_Q.state_dict(), os.path.join(result_f,'pong_Q_target_final'))
     
     Q = DQN(config).to(config.DEVICE)
     target_Q = DQN(config).to(config.DEVICE)
     ####### load model ##########
     
-    Q.load_state_dict(torch.load('pong_Q_final'))
-    target_Q.load_state_dict(torch.load('pong_Q_target_final'))
+    Q.load_state_dict(torch.load(os.path.join(result_f,'pong_Q_final')))
+    target_Q.load_state_dict(torch.load(os.path.join(result_f,'pong_Q_target_final')))
     
     reward_tot, reward, t, done, frames = simulate(env, 500,config, True)
     save_frames_as_gif(frames[::2])
     return reward_tot
 if __name__ == "__main__":
-    train("/home/heavens/twilight/NASRL_DQN/configs/0/2.json")
+    train("/home/heavens/twilight/NASRL_DQN/configs/0/2.json","/home/heavens/twilight/NASRL_DQN/configs/0/2")
 
 

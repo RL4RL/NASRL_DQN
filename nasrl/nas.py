@@ -235,7 +235,7 @@ def train(cmd_args):
             with open(conf_f,'w+') as f:
                 json.dump(conf,f)
         for conf_f in conf_fs:
-            rewards.append(dqn.train(conf_f))
+            rewards.append(dqn.train(conf_f,os.path.splitext(conf_f)[0]))
             with open(conf_f+".reward","w+") as f:
                 f.write(str(rewards[-1]))
         rewards = np.array(rewards)
