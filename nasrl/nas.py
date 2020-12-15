@@ -236,6 +236,8 @@ def train(cmd_args):
                 json.dump(conf,f)
         for conf_f in conf_fs:
             rewards.append(dqn.train(conf_f))
+            with open(conf_f+".reward","w+") as f:
+                f.write(str(rewards[-1]))
         rewards = np.array(rewards)
         reward_baseline = reward_baseline*decay + np.mean(rewards)*(1-decay)
         rewards = rewards-reward_baseline
