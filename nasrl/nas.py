@@ -71,14 +71,14 @@ class RNN(nn.Module):
         return self.outputs_prob
     
     def loss(self,rewards,ys):
-        rewards = torch.from_numpy(rewards,requires_grad=False)
+        rewards = torch.tensor(rewards,requires_grad=False)
         for i,output_prob in enumerate(self.outputs_prob):
-            y = torch.from_numpy(ys[i],requires_grad=False)
+            y = torch.tensor(ys[i],requires_grad=False)
             if i==0:
                 loss = torch.dot(rewards,torch.sum(y*torch.log(output_prob),dim = 1))
             else:
                 loss += torch.dot(rewards,torch.sum(y*torch.log(output_prob),dim = 1))
-                
+        return loss                
 class Blocks(object):
     def __init__(self,config):
         self.config = config
