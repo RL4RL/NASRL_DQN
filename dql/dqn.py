@@ -239,7 +239,7 @@ def train(conf_file = None,result_f = ''):
         EPS_0 = 1.0
         EPS_MIN = 0.1
         EPS_LEN = 2*BUFFER_SIZE
-        INITIAL_COLLECTION=5 * BASE
+        INITIAL_COLLECTION=20 * BASE
         REPEAT_ACTIONS = 1
         FRAME_STACK = 4
         LEARNING_RATE = 1e-4

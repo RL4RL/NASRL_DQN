@@ -71,9 +71,9 @@ class RNN(nn.Module):
         return self.outputs_prob
     
     def loss(self,rewards,ys):
-        rewards = torch.tensor(rewards,requires_grad=False)
+        rewards = torch.tensor(rewards)
         for i,output_prob in enumerate(self.outputs_prob):
-            y = torch.tensor(ys[i],requires_grad=False)
+            y = torch.tensor(ys[i])
             if i==0:
                 loss = torch.dot(rewards,torch.sum(y*torch.log(output_prob),dim = 1))
             else:
@@ -191,7 +191,7 @@ def train(cmd_args):
         OUT_SIZE = sum(STATE_SIZE[:-1])
         ANCHOR_SIZE = 10
         LAYER_N = 2
-        LR = 0.0006
+        LR = 0.006
     class BLOCKS_CONFIG(NAS_CONFIG):
         BLOCK_PROTO = {'parents':[],
                       'childs':[],
@@ -216,14 +216,14 @@ def train(cmd_args):
     config = TRAINING_CONFIG()
     net = RNN(config)
     optimizer = optim.Adam(net.parameters(),lr = config.LEARNING_RATE)  
-    outputs = net.forward(config.BATCH_SIZE)
     blocks = Blocks(config)
-    confs,y = blocks.gen_conf(outputs)
     reward_baseline = 0
     decay = 0.9
     if not os.path.isdir(config.CONF_FOLDER):
         os.mkdir(config.CONF_FOLDER)
     for step in np.arange(config.TRAIN_STEP):
+        outputs = net.forward(config.BATCH_SIZE)
+        confs,y = blocks.gen_conf(outputs)
         n_f = os.path.join(config.CONF_FOLDER,str(step))
         if not os.path.isdir(n_f):
             os.mkdir(n_f)
