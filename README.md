@@ -20,7 +20,7 @@ python dql/dqn.py --conf block_conf.json
 ### Run Neural Architecture Search using RNN for multiple deep Q learning
 
 ```python
-python nsarl.py nas.py
+python nsarl/nas.py -c ./outputs/
 ```
 ### Run Neural Architecture Search using Evolutionary algorithm.
 ```python

@@ -234,7 +234,7 @@ def train(conf_file = None,result_f = ''):
         IMAGE_SIZE = (84,84)
         GAMMA = 1.0
         T_MAX = 5000
-        EPISODE_MAX = 1
+        EPISODE_MAX = 1000
         TARGET_UPDATE = 1*BASE
         EPS_0 = 1.0
         EPS_MIN = 0.1
