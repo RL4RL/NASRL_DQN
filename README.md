@@ -27,6 +27,6 @@ python nsarl/nas.py -c ./outputs/
 python evo2.py
 ```
 ### Contributor (Alphabetical order)  
-@(haotianteng)[https://github.com/haotianteng]
-@(xcui297)[https://github.com/xcui297]
-@(ypkuo708)[https://github.com/ypkuo708]
+@(haotianteng)[https://github.com/haotianteng]  
+@(xcui297)[https://github.com/xcui297]  
+@(ypkuo708)[https://github.com/ypkuo708]  
